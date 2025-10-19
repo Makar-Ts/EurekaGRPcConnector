@@ -1,7 +1,7 @@
 {
   "name": "nestjs-eureka-grpc-connector",
-  "version": "0.1.0",
-  "description": "",
+  "version": "0.2.0",
+  "description": "A NestJS module for seamless integration between Eureka service discovery and gRPC clients with automatic service registration and load balancing",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -33,6 +33,24 @@
     "url": "https://github.com/Makar-Ts"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Makar-Ts/EurekaGRPcConnector"
+  },
+  "homepage": "https://github.com/Makar-Ts/EurekaGRPcConnector#readme",
+  "bugs": {
+    "url": "https://github.com/Makar-Ts/EurekaGRPcConnector/issues"
+  },
+  "keywords": [
+    "nestjs",
+    "grpc",
+    "eureka",
+    "microservices",
+    "service-discovery",
+    "load-balancing",
+    "typescript",
+    "netflix-eureka"
+  ],
   "devDependencies": {
     "tsup": "^8.5.0",
     "typescript": "^5.9.3"

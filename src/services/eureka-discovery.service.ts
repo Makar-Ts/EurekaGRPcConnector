@@ -4,6 +4,19 @@ import { parseString } from 'xml2js';
 import type { ServiceInstance } from '../interfaces/server-instance.interface.js';
 import { firstValueFrom } from 'rxjs';
 
+/**
+ * Service responsible for discovering and managing service instances from Eureka
+ * 
+ * @example
+ * ```typescript
+ * constructor(private discoveryService: EurekaDiscoveryService) {}
+ * 
+ * async discover() {
+ *   await this.discoveryService.discoverServices('http://eureka:8761/eureka/apps');
+ *   const instances = this.discoveryService.getServiceInstances('USER-SERVICE');
+ * }
+ * ```
+ */
 @Injectable()
 export class EurekaDiscoveryService {
   private readonly logger = new Logger(EurekaDiscoveryService.name);
@@ -11,10 +24,19 @@ export class EurekaDiscoveryService {
 
   constructor(@Inject(HttpService) private readonly httpService: HttpService) {}
 
+  /**
+   * Gets all discovered services
+   */
   get allServices() {
     return this.instances;
   }
 
+  /**
+   * Discovers services from Eureka server and updates internal cache
+   * 
+   * @param eurekaUrl - The Eureka server URL to fetch services from
+   * @returns Promise that resolves when discovery is complete
+   */
   async discoverServices(eurekaUrl: string): Promise<void> {
     try {
       const response = await firstValueFrom(this.httpService.get(eurekaUrl));
@@ -40,10 +62,23 @@ export class EurekaDiscoveryService {
     }
   }
 
+  /**
+   * Gets all instances for a specific service
+   * 
+   * @param serviceName - The name of the service to get instances for
+   * @returns Array of service instances or empty array if none found
+   */
   getServiceInstances(serviceName: string): ServiceInstance[] {
     return this.instances.get(serviceName) || [];
   }
 
+  /**
+   * Parses XML response from Eureka
+   * 
+   * @param xml - XML string to parse
+   * @returns Promise that resolves with parsed XML object
+   * @private
+   */
   private parseXml(xml: string): Promise<any> {
     return new Promise((resolve, reject) => {
       const cleanedXml = xml.replace(/^\ufeff/i, '').trim();

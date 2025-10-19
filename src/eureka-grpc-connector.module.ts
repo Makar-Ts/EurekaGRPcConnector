@@ -8,8 +8,45 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { Reflector } from '@nestjs/core';
 import { GrpcServices } from './services/grpc-services.service.js';
 
+
+/**
+ * Main module for Eureka gRPC connector that provides service discovery
+ * and gRPC client management capabilities.
+ * 
+ * @example
+ * ```typescript
+ * // Synchronous configuration
+ * EurekaGRPcConnectorModule.register({
+ *   eureka: { url: 'http://eureka:8761/eureka/apps' },
+ *   apps: {
+ *     'USER-SERVICE': { // < eureka app name
+ *       package: 'user',
+ *       protoPath: 'proto/user.proto',
+ *       serviceName: 'userService' // < injectable name
+ *     }
+ *   }
+ * })
+ * 
+ * // Asynchronous configuration
+ * EurekaGRPcConnectorModule.registerAsync({
+ *   imports: [ConfigModule],
+ *   useFactory: (config: ConfigService) => ({
+ *     eureka: { url: config.get('EUREKA_URL') },
+ *     apps: { ... }
+ *   }),
+ *   inject: [ConfigService]
+ * })
+ * ```
+ */
 @Module({})
 export class EurekaGRPcConnectorModule {
+
+  /**
+   * Register the module with synchronous configuration
+   * 
+   * @param options - Module configuration options
+   * @returns DynamicModule configuration
+   */
   static register(options: EurekaGRPcConnectorModuleOptions): DynamicModule {
     return {
       module: EurekaGRPcConnectorModule,
@@ -30,6 +67,13 @@ export class EurekaGRPcConnectorModule {
     };
   }
 
+
+  /**
+   * Register the module with asynchronous configuration
+   * 
+   * @param options - Asynchronous module configuration options
+   * @returns DynamicModule configuration
+   */
   static registerAsync(options: EurekaGRPcConnectorModuleAsyncOptions): DynamicModule {
     return {
       module: EurekaGRPcConnectorModule,
@@ -57,6 +101,14 @@ export class EurekaGRPcConnectorModule {
     };
   }
 
+
+  /**
+   * Creates async providers based on configuration type
+   * 
+   * @param options - Async configuration options
+   * @returns Array of providers
+   * @private
+   */
   private static createAsyncProviders(
     options: EurekaGRPcConnectorModuleAsyncOptions,
   ): Provider[] {

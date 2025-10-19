@@ -6,12 +6,25 @@ import type { EurekaGRPcConnectorModuleOptions } from '../interfaces/module-opti
 import type { ServiceInstance } from '../interfaces/server-instance.interface.js';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
+/**
+ * Service for managing gRPC clients with Eureka service discovery
+ * Handles client creation, load balancing, and periodic updates
+ * 
+ * @example
+ * ```typescript
+ * constructor(private grpcClientService: GrpcClientService) {}
+ * 
+ * getClient() {
+ *   const client = this.grpcClientService.getClient('userService');
+ *   return client.getService('user');
+ * }
+ * ```
+ */
 @Injectable()
-export class GrpcClientService implements OnModuleInit, OnModuleDestroy {
+export class GrpcClientService implements OnModuleInit {
   private readonly logger = new Logger(GrpcClientService.name);
 
   private clients = new Map<string, ClientGrpc>();
-  private updateTimer!: NodeJS.Timeout;
 
   constructor(
     @Inject(EurekaDiscoveryService)
@@ -20,23 +33,28 @@ export class GrpcClientService implements OnModuleInit, OnModuleDestroy {
     private readonly options: EurekaGRPcConnectorModuleOptions,
   ) {}
 
+  /**
+   * Initializes the service
+   */
   async onModuleInit() {
     await this.updateClients();
-    
-    // this.updateTimer = setInterval(() => {
-    //   this.updateClients();
-    // }, this.options.eureka.pollInterval || 30000);
   }
 
+  /**
+   * Cron job for updating clients every 30 seconds
+   */
   @Cron(CronExpression.EVERY_30_SECONDS)
   update() {
     this.updateClients();
   }
 
-  onModuleDestroy() {
-    this.updateTimer.close();
-  }
-
+  /**
+   * Gets a gRPC client for the specified service
+   * 
+   * @param serviceName - The name of the service to get client for
+   * @returns ClientGrpc instance for the service
+   * @throws Error if client for service is not found
+   */
   getClient(serviceName: string): ClientGrpc {
     const client = this.clients.get(serviceName);
     if (!client) {
@@ -45,6 +63,11 @@ export class GrpcClientService implements OnModuleInit, OnModuleDestroy {
     return client;
   }
 
+  /**
+   * Updates all gRPC clients based on current service instances from Eureka
+   * 
+   * @private
+   */
   private async updateClients() {
     await this.discoveryService.discoverServices(this.options.eureka.url);
     
@@ -61,6 +84,13 @@ export class GrpcClientService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Creates a gRPC client for a specific service instance
+   * 
+   * @param serviceName - The name of the service
+   * @param instance - The service instance to connect to
+   * @private
+   */
   private async createClient(serviceName: string, instance: ServiceInstance) {
     const options = this.options.apps[serviceName];
 
