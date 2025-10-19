@@ -50,7 +50,7 @@ export class EurekaDiscoveryService {
           ipAddr: inst.ipAddr,
           port: +inst.metadata.gRPC_port,
           status: inst.status
-        }));
+        })).filter((i: ServiceInstance) => !!i.port);
         this.instances.set(app.name, instances);
 
         //this.logger.debug(`Discovered ${app.name} service with ${instances.length} instances`);

@@ -1,6 +1,6 @@
 {
   "name": "nestjs-eureka-grpc-connector",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A NestJS module for seamless integration between Eureka service discovery and gRPC clients with automatic service registration and load balancing",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
