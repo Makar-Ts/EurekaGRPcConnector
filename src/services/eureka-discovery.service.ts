@@ -3,6 +3,9 @@ import { HttpService } from '@nestjs/axios';
 import { parseString } from 'xml2js';
 import type { ServiceInstance } from '../interfaces/server-instance.interface.js';
 import { firstValueFrom } from 'rxjs';
+import { InstanceProcessor } from '../interfaces/instance-processor.type.js';
+import { EurekaApp, EurekaInstance } from '../interfaces/eureka-instance.interface.js';
+import { defaultInstanceProcessor } from '../helpers/default-instance-processor.js';
 
 /**
  * Service responsible for discovering and managing service instances from Eureka
@@ -11,9 +14,12 @@ import { firstValueFrom } from 'rxjs';
  * ```typescript
  * constructor(private discoveryService: EurekaDiscoveryService) {}
  * 
- * async discover() {
- *   await this.discoveryService.discoverServices('http://eureka:8761/eureka/apps');
- *   const instances = this.discoveryService.getServiceInstances('USER-SERVICE');
+ * async discoverServices() {
+ *   const instances = await this.discoveryService.discoverServices(
+ *     'http://eureka:8761/eureka/apps',
+ *     { debug: true }
+ *   );
+ *   const userInstances = this.discoveryService.getServiceInstances('USER-SERVICE');
  * }
  * ```
  */
@@ -37,29 +43,31 @@ export class EurekaDiscoveryService {
    * @param eurekaUrl - The Eureka server URL to fetch services from
    * @returns Promise that resolves when discovery is complete
    */
-  async discoverServices(eurekaUrl: string): Promise<void> {
+  async discoverServices(eurekaUrl: string, options?: { debug?: boolean, instanceProcessor?: InstanceProcessor }): Promise<Map<string, ServiceInstance[]>> {
+    const debug = options && !!options.debug;
+    const instanceProcessor = options?.instanceProcessor || defaultInstanceProcessor;
+
     try {
       const response = await firstValueFrom(this.httpService.get(eurekaUrl));
       
       this.instances.clear();
-      for (let app of response.data.applications.application) {
-        const instances: ServiceInstance[] = app.instance.map((inst: any) => ({
-          app: app.name,
-          instanceId: inst.instanceId,
-          hostName: inst.hostName,
-          ipAddr: inst.ipAddr,
-          port: +inst.metadata.gRPC_port,
-          status: inst.status
-        })).filter((i: ServiceInstance) => !!i.port);
+      for (let app of response.data.applications.application as EurekaApp[]) {
+        const instances: ServiceInstance[] = 
+          (app.instance || [])
+            .map((inst: EurekaInstance) => (instanceProcessor(inst, app)))
+            .filter(i => i != null);
+        
         this.instances.set(app.name, instances);
 
-        //this.logger.debug(`Discovered ${app.name} service with ${instances.length} instances`);
+        debug && this.logger.debug(`Discovered ${app.name} service with ${instances.length} instances`);
       }
       
-      //this.logger.debug(`Discovered ${this.instances.size} services`);
+      debug && this.logger.debug(`Discovered ${this.instances.size} services`);
     } catch (error: any) {
       this.logger.error('Failed to discover services', error.stack);
     }
+
+    return this.instances;
   }
 
   /**

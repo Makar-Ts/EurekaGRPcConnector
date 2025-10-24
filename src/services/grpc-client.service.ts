@@ -5,6 +5,7 @@ import { EurekaDiscoveryService } from './eureka-discovery.service.js';
 import type { EurekaGRPcConnectorModuleOptions } from '../interfaces/module-options.interface.js';
 import type { ServiceInstance } from '../interfaces/server-instance.interface.js';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { CronJob } from "cron";
 
 /**
  * Service for managing gRPC clients with Eureka service discovery
@@ -14,15 +15,17 @@ import { Cron, CronExpression } from '@nestjs/schedule';
  * ```typescript
  * constructor(private grpcClientService: GrpcClientService) {}
  * 
- * getClient() {
- *   const client = this.grpcClientService.getClient('userService');
- *   return client.getService('user');
+ * async getUser() {
+ *   const client = this.grpcClientService.getClient('UserService');
+ *   const userService = client.getService<UserService>('user');
+ *   return userService.getUser({ id: '123' });
  * }
  * ```
  */
 @Injectable()
-export class GrpcClientService implements OnModuleInit {
+export class GrpcClientService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GrpcClientService.name);
+  private updateJob!: CronJob;
 
   private clients = new Map<string, ClientGrpc>();
 
@@ -38,14 +41,19 @@ export class GrpcClientService implements OnModuleInit {
    */
   async onModuleInit() {
     await this.updateClients();
+
+    this.updateJob = new CronJob(
+      `*/${(this.options.eureka.pollInterval ?? 30000) / 1000} * * * * *`,
+      () => this.updateClients(),
+      null,
+      true,
+    );
+
+    this.updateJob.start();
   }
 
-  /**
-   * Cron job for updating clients every 30 seconds
-   */
-  @Cron(CronExpression.EVERY_30_SECONDS)
-  update() {
-    this.updateClients();
+  async onModuleDestroy() {
+    this.updateJob.stop();
   }
 
   /**
@@ -69,7 +77,10 @@ export class GrpcClientService implements OnModuleInit {
    * @private
    */
   private async updateClients() {
-    await this.discoveryService.discoverServices(this.options.eureka.url);
+    await this.discoveryService.discoverServices(this.options.eureka.url, { 
+      debug: this.options.eureka.debug ?? false,
+      ...(this.options.instanceProcessor ? { instanceProcessor: this.options.instanceProcessor } : {})
+    });
     
     for (const [serviceName, instances] of this.discoveryService.allServices) {
       const availableInstances = instances.filter(i => i.status === 'UP');
@@ -95,7 +106,7 @@ export class GrpcClientService implements OnModuleInit {
     const options = this.options.apps[serviceName];
 
     if (!options) {
-      //this.logger.debug(`Service ${serviceName} exists in Eureka, but does not in module options.`)
+      this.options.eureka.debug && this.logger.debug(`Service ${serviceName} exists in Eureka, but does not in module options.`)
       return
     }
 

@@ -1,5 +1,6 @@
 import { Metadata } from "@grpc/grpc-js";
 import type { ModuleMetadata, Type } from "@nestjs/common";
+import { InstanceProcessor } from "./instance-processor.type";
 
 /**
  * Configuration options for setting up a gRPC client
@@ -25,7 +26,10 @@ export interface EurekaGRPcConnectorModuleOptions {
     pollInterval?: number;
     /** Additional metadata for Eureka requests (optional) */
     metadata?: Metadata;
+
+    debug?: boolean;
   };
+  instanceProcessor?: InstanceProcessor;
   /** Mapping of service names to their gRPC configuration */
   apps: Record<string, GRPcClientSetupOptions>;
 }

@@ -17,12 +17,15 @@ import { GrpcServices } from './services/grpc-services.service.js';
  * ```typescript
  * // Synchronous configuration
  * EurekaGRPcConnectorModule.register({
- *   eureka: { url: 'http://eureka:8761/eureka/apps' },
+ *   eureka: { 
+ *     url: 'http://eureka:8761/eureka/apps',
+ *     debug: true 
+ *   },
  *   apps: {
- *     'USER-SERVICE': { // < eureka app name
+ *     'USER-SERVICE': {
  *       package: 'user',
  *       protoPath: 'proto/user.proto',
- *       serviceName: 'userService' // < injectable name
+ *       serviceName: 'UserService'
  *     }
  *   }
  * })

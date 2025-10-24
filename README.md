@@ -10,6 +10,8 @@ A powerful NestJS module that provides seamless integration between Netflix Eure
 - 🛠 **Type-Safe**: Full TypeScript support with proper type definitions
 - ⚡ **Async Configuration**: Support for both synchronous and asynchronous configuration
 - 🔌 **Multiple Services**: Support for connecting to multiple gRPC services simultaneously
+- 🔧 **Custom Processing**: Extensible instance processing with custom processors
+- 📊 **Debug Mode**: Optional debug logging for development
 
 ## Installation
 
@@ -17,12 +19,19 @@ A powerful NestJS module that provides seamless integration between Netflix Eure
 npm install nestjs-eureka-grpc-connector
 ```
 
+## Prerequisites
+
+- NestJS application
+- Eureka server running
+- Proto files for your gRPC services
+
 ## Quick Start
 
 ### Basic Setup
 
 ```typescript
 import { Module } from '@nestjs/common';
+import { join } from 'path';
 import { EurekaGRPcConnectorModule } from 'nestjs-eureka-grpc-connector';
 
 @Module({
@@ -30,12 +39,13 @@ import { EurekaGRPcConnectorModule } from 'nestjs-eureka-grpc-connector';
     EurekaGRPcConnectorModule.register({
       eureka: {
         url: 'http://eureka-server:8761/eureka/apps',
+        debug: true, // Optional: enable debug logging
       },
       apps: {
-        'USER-SERVICE': { // < eureka app name
+        'USER-SERVICE': { // Eureka app name
           package: 'user',
           protoPath: join(__dirname, './proto/user.proto'),
-          serviceName: 'UserService', // < injectable name
+          serviceName: 'UserService', // Injectable service name
         },
         'ORDER-SERVICE': {
           package: 'order',
@@ -63,6 +73,7 @@ import { EurekaGRPcConnectorModule } from 'nestjs-eureka-grpc-connector';
       useFactory: async (configService: ConfigService) => ({
         eureka: {
           url: configService.get('EUREKA_URL'),
+          debug: configService.get('EUREKA_DEBUG') === 'true',
         },
         apps: {
           [configService.get('USER_SERVICE_NAME')]: {
@@ -79,9 +90,50 @@ import { EurekaGRPcConnectorModule } from 'nestjs-eureka-grpc-connector';
 export class AppModule {}
 ```
 
+### Custom Instance Processing
+
+```typescript
+import { Module } from '@nestjs/common';
+import { EurekaGRPcConnectorModule, InstanceProcessor } from 'nestjs-eureka-grpc-connector';
+
+const customInstanceProcessor: InstanceProcessor = (eurekaInstance, eurekaApp) => {
+  // Custom logic to process Eureka instances
+  if (eurekaInstance.metadata?.customGrpcPort) {
+    return {
+      app: eurekaApp.name,
+      instanceId: eurekaInstance.instanceId,
+      hostName: eurekaInstance.hostName,
+      ipAddr: eurekaInstance.ipAddr,
+      port: +eurekaInstance.metadata.customGrpcPort,
+      status: eurekaInstance.status
+    };
+  }
+  return null;
+};
+
+@Module({
+  imports: [
+    EurekaGRPcConnectorModule.register({
+      eureka: {
+        url: 'http://eureka-server:8761/eureka/apps',
+      },
+      instanceProcessor: customInstanceProcessor,
+      apps: {
+        'USER-SERVICE': {
+          package: 'user',
+          protoPath: join(__dirname, './proto/user.proto'),
+          serviceName: 'UserService',
+        },
+      },
+    }),
+  ],
+})
+export class AppModule {}
+```
+
 ## Usage
 
-### Using the GrpcServices Service
+### Using the GrpcServices Service (Recommended)
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -104,6 +156,24 @@ export class UserClientService {
   async createUser(name: string, email: string) {
     const userService = this.grpcServices.getService<UserService>('UserService');
     return userService.createUser({ name, email });
+  }
+}
+```
+
+### Using GrpcClientService Directly
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { GrpcClientService } from 'nestjs-eureka-grpc-connector';
+
+@Injectable()
+export class UserClientService {
+  constructor(private readonly grpcClientService: GrpcClientService) {}
+
+  async getUser(id: string) {
+    const client = this.grpcClientService.getClient('UserService');
+    const userService = client.getService<any>('user'); // 'user' is the proto package name
+    return userService.getUser({ id });
   }
 }
 ```
@@ -141,7 +211,7 @@ Service responsible for Eureka service discovery.
 
 #### Methods
 
-- `discoverServices(eurekaUrl: string): Promise<void>`: Discover services from Eureka
+- `discoverServices(eurekaUrl: string, options?: { debug?: boolean, instanceProcessor?: InstanceProcessor }): Promise<Map<string, ServiceInstance[]>`: Discover services from Eureka
 - `getServiceInstances(serviceName: string): ServiceInstance[]`: Get instances for a service
 - `get allServices`: Get all discovered services
 
@@ -153,9 +223,11 @@ Service responsible for Eureka service discovery.
 interface EurekaGRPcConnectorModuleOptions {
   eureka: {
     url: string;
-    pollInterval?: number;
+    pollInterval?: number; // Note: Currently not implemented
     metadata?: Metadata;
+    debug?: boolean;
   };
+  instanceProcessor?: InstanceProcessor; // Custom instance processing
   apps: Record<string, GRPcClientSetupOptions>;
 }
 ```
@@ -164,9 +236,9 @@ interface EurekaGRPcConnectorModuleOptions {
 
 ```typescript
 interface GRPcClientSetupOptions {
-  package: string;
-  protoPath: string;
-  serviceName: string;
+  package: string;        // Proto package name
+  protoPath: string;      // Path to proto file
+  serviceName: string;    // Injectable service name
 }
 ```
 
@@ -174,12 +246,12 @@ interface GRPcClientSetupOptions {
 
 ```typescript
 interface ServiceInstance {
-  app: string;
-  instanceId: string;
-  hostName: string;
-  ipAddr: string;
-  port: number;
-  status: string;
+  app: string;           // Application name in Eureka
+  instanceId: string;    // Unique instance identifier
+  hostName: string;      // Hostname of the instance
+  ipAddr: string;       // IP address of the instance
+  port: number;         // gRPC port number
+  status: string;       // Instance status (UP, DOWN, etc.)
 }
 ```
 
@@ -200,6 +272,59 @@ eureka:
 ### Proto File Requirements
 
 Your proto files should be accessible at the specified `protoPath`. The library uses the package name from the proto file to create the service client.
+
+Example proto file:
+
+```proto
+syntax = "proto3";
+
+package user;
+
+service UserService {
+  rpc GetUser (GetUserRequest) returns (UserResponse);
+  rpc CreateUser (CreateUserRequest) returns (UserResponse);
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+}
+
+message UserResponse {
+  User user = 1;
+}
+
+message User {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+}
+```
+
+## Error Handling
+
+The module includes comprehensive error handling:
+
+- Failed Eureka discovery attempts are logged but don't crash the application
+- Missing services throw clear error messages
+- Invalid configurations are validated on startup
+
+## Best Practices
+
+1. **Service Naming**: Use consistent naming between Eureka app names and service configurations
+2. **Error Handling**: Always wrap gRPC calls in try-catch blocks
+3. **Health Checks**: Monitor service health through Eureka status
+4. **Debug Mode**: Enable debug mode during development for better visibility
+
+## Common Issues
+
+1. **Service Not Found**: Ensure the Eureka app name matches exactly in your configuration
+2. **Port Issues**: Verify that `gRPC_port` is set in Eureka metadata
+3. **Proto Path**: Use absolute paths for proto files to avoid path resolution issues
 
 ## License
 
