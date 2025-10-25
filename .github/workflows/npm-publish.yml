@@ -16,11 +16,10 @@ jobs:
           cache: 'npm'
 
       # no shit :3
-      # - run: npm ci
+      - run: npm ci
       # - run: npm test
-      # - run: npm run build --if-present
+      - run: npm run build --if-present
 
-      - run: npm i
       - name: Publish to npm
         run: npm publish
         env:
