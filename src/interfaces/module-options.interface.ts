@@ -1,6 +1,7 @@
 import { Metadata } from "@grpc/grpc-js";
 import type { ModuleMetadata, Type } from "@nestjs/common";
 import { InstanceProcessor } from "./instance-processor.type";
+import { Eureka } from "eureka-js-client";
 
 /**
  * Configuration options for setting up a gRPC client
@@ -22,10 +23,17 @@ export interface EurekaGRPcConnectorModuleOptions {
   eureka: {
     /** Eureka server URL */
     url: string;
-    /** [not working] Polling interval in milliseconds (optional, defaults to 30000) */
+    /** Polling interval in milliseconds (optional, defaults to 30000) */
     pollInterval?: number;
     /** Additional metadata for Eureka requests (optional) */
     metadata?: Metadata;
+
+    debug?: boolean;
+  } | {
+    /** Initialized eureka-js-client client */
+    eureka: Eureka,
+    /** Polling interval in milliseconds (optional, defaults to 30000) */
+    pollInterval?: number;
 
     debug?: boolean;
   };

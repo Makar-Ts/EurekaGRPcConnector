@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { InstanceProcessor } from '../interfaces/instance-processor.type.js';
 import { EurekaApp, EurekaInstance } from '../interfaces/eureka-instance.interface.js';
 import { defaultInstanceProcessor } from '../helpers/default-instance-processor.js';
+import { Eureka } from 'eureka-js-client';
 
 /**
  * Service responsible for discovering and managing service instances from Eureka
@@ -40,26 +41,46 @@ export class EurekaDiscoveryService {
   /**
    * Discovers services from Eureka server and updates internal cache
    * 
-   * @param eurekaUrl - The Eureka server URL to fetch services from
+   * @param eureka - The Eureka server URL or Eureka client to fetch services from
    * @returns Promise that resolves when discovery is complete
    */
-  async discoverServices(eurekaUrl: string, options?: { debug?: boolean, instanceProcessor?: InstanceProcessor }): Promise<Map<string, ServiceInstance[]>> {
+  async discoverServices(eureka: Eureka, options: { debug?: boolean, instanceProcessor?: InstanceProcessor, appsIds: string[] }): Promise<Map<string, ServiceInstance[]>>
+  async discoverServices(eureka: string, options?: { debug?: boolean, instanceProcessor?: InstanceProcessor }): Promise<Map<string, ServiceInstance[]>>
+  async discoverServices(eureka: string | Eureka, options?: any): Promise<Map<string, ServiceInstance[]>> {
     const debug = options && !!options.debug;
     const instanceProcessor = options?.instanceProcessor || defaultInstanceProcessor;
 
     try {
-      const response = await firstValueFrom(this.httpService.get(eurekaUrl));
-      
-      this.instances.clear();
-      for (let app of response.data.applications.application as EurekaApp[]) {
-        const instances: ServiceInstance[] = 
-          (app.instance || [])
-            .map((inst: EurekaInstance) => (instanceProcessor(inst, app)))
-            .filter(i => i != null);
+      if (typeof eureka == 'object') {
+        const apps = options!.appsIds.map((v: string) => eureka.getInstancesByAppId(v));
         
-        this.instances.set(app.name, instances);
+        this.instances.clear();
+        for (let [index, inst] of Object.entries(apps)) {
+          const appName = options!.appsIds[+index];
 
-        debug && this.logger.debug(`Discovered ${app.name} service with ${instances.length} instances`);
+          const instances: ServiceInstance[] = 
+            (inst as any)
+              .map((i: EurekaInstance) => (instanceProcessor(i, { name: appName })))
+              .filter((i: EurekaInstance) => i != null);
+          
+          this.instances.set(appName, instances);
+
+          debug && this.logger.debug(`Discovered ${appName} service with ${instances.length} instances`);
+        }
+      } else {
+        const response = await firstValueFrom(this.httpService.get(eureka));
+
+        this.instances.clear();
+        for (let app of response.data.applications.application as EurekaApp[]) {
+          const instances: ServiceInstance[] = 
+            (app.instance || [])
+              .map((inst: EurekaInstance) => (instanceProcessor(inst, app)))
+              .filter(i => i != null);
+          
+          this.instances.set(app.name, instances);
+
+          debug && this.logger.debug(`Discovered ${app.name} service with ${instances.length} instances`);
+        }
       }
       
       debug && this.logger.debug(`Discovered ${this.instances.size} services`);

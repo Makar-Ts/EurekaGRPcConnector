@@ -6,6 +6,7 @@ import type { EurekaGRPcConnectorModuleOptions } from '../interfaces/module-opti
 import type { ServiceInstance } from '../interfaces/server-instance.interface.js';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { CronJob } from "cron";
+import { Eureka } from 'eureka-js-client';
 
 /**
  * Service for managing gRPC clients with Eureka service discovery
@@ -77,10 +78,19 @@ export class GrpcClientService implements OnModuleInit, OnModuleDestroy {
    * @private
    */
   private async updateClients() {
-    await this.discoveryService.discoverServices(this.options.eureka.url, { 
-      debug: this.options.eureka.debug ?? false,
-      ...(this.options.instanceProcessor ? { instanceProcessor: this.options.instanceProcessor } : {})
-    });
+    if ('eureka' in this.options.eureka) {
+      await this.discoveryService.discoverServices(this.options.eureka.eureka, { 
+        debug: this.options.eureka.debug ?? false,
+        ...(this.options.instanceProcessor ? { instanceProcessor: this.options.instanceProcessor } : {}),
+        appsIds: Object.keys(this.options.apps),
+      });
+    } else {
+      await this.discoveryService.discoverServices(this.options.eureka.url, { 
+        debug: this.options.eureka.debug ?? false,
+        ...(this.options.instanceProcessor ? { instanceProcessor: this.options.instanceProcessor } : {})
+      });
+    }
+    
     
     for (const [serviceName, instances] of this.discoveryService.allServices) {
       const availableInstances = instances.filter(i => i.status === 'UP');

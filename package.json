@@ -1,6 +1,6 @@
 {
   "name": "nestjs-eureka-grpc-connector",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A NestJS module for seamless integration between Eureka service discovery and gRPC clients with automatic service registration and load balancing",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -52,6 +52,7 @@
     "netflix-eureka"
   ],
   "devDependencies": {
+    "@types/eureka-js-client": "^4.5.9",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3"
   },
@@ -64,6 +65,7 @@
     "@nestjs/schedule": "^6.0.1",
     "@types/xml2js": "^0.4.14",
     "axios": "^1.12.2",
+    "eureka-js-client": "^4.5.0",
     "nestjs": "^0.0.1",
     "xml2js": "^0.6.2"
   }
