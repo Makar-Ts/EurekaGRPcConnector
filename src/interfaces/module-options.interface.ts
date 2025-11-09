@@ -17,6 +17,27 @@ export interface GRPcClientSetupOptions {
 
 /**
  * Main configuration options for the Eureka gRPC connector module
+ * 
+ * @example
+ * ```typescript
+ * // With Eureka URL
+ * {
+ *   eureka: {
+ *     url: 'http://eureka:8761/eureka/apps',
+ *     debug: true
+ *   },
+ *   apps: { ... }
+ * }
+ * 
+ * // With Eureka JS Client
+ * {
+ *   eureka: {
+ *     eureka: eurekaClientInstance,
+ *     debug: true  
+ *   },
+ *   apps: { ... }
+ * }
+ * ```
  */
 export interface EurekaGRPcConnectorModuleOptions {
   /** Eureka server configuration */

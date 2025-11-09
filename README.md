@@ -5,13 +5,14 @@ A powerful NestJS module that provides seamless integration between Netflix Eure
 ## Features
 
 - 🔍 **Automatic Service Discovery**: Automatically discovers gRPC services from Eureka registry
-- ⚖️ **Load Balancing**: Random load balancing between available service instances
+- ⚖️ **Load Balancing**: Random load balancing between available service instances  
 - 🔄 **Dynamic Updates**: Periodically updates service instances from Eureka
 - 🛠 **Type-Safe**: Full TypeScript support with proper type definitions
 - ⚡ **Async Configuration**: Support for both synchronous and asynchronous configuration
 - 🔌 **Multiple Services**: Support for connecting to multiple gRPC services simultaneously
 - 🔧 **Custom Processing**: Extensible instance processing with custom processors
 - 📊 **Debug Mode**: Optional debug logging for development
+- 🔄 **Eureka Client Support**: Built-in support for eureka-js-client for advanced Eureka integration
 
 ## Installation
 
@@ -22,12 +23,12 @@ npm install nestjs-eureka-grpc-connector
 ## Prerequisites
 
 - NestJS application
-- Eureka server running
+- Eureka server running OR eureka-js-client configuration
 - Proto files for your gRPC services
 
 ## Quick Start
 
-### Basic Setup
+### Basic Setup with Eureka URL
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -47,10 +48,53 @@ import { EurekaGRPcConnectorModule } from 'nestjs-eureka-grpc-connector';
           protoPath: join(__dirname, './proto/user.proto'),
           serviceName: 'UserService', // Injectable service name
         },
-        'ORDER-SERVICE': {
-          package: 'order',
-          protoPath: join(__dirname, './proto/order.proto'),
-          serviceName: 'OrderService',
+      },
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Setup with Eureka JS Client
+
+```typescript
+import { Module } from '@nestjs/common';
+import { join } from 'path';
+import { EurekaGRPcConnectorModule } from 'nestjs-eureka-grpc-connector';
+import { Eureka } from 'eureka-js-client';
+
+// Configure Eureka client
+const eurekaClient = new Eureka({
+  instance: {
+    app: 'my-service',
+    hostName: 'localhost',
+    ipAddr: '127.0.0.1',
+    port: 8080,
+    vipAddress: 'my-service',
+    dataCenterInfo: {
+      name: 'MyOwn',
+    },
+  },
+  eureka: {
+    host: 'eureka-server',
+    port: 8761,
+    servicePath: '/eureka/apps',
+  },
+});
+eurekaClient.start();
+
+@Module({
+  imports: [
+    EurekaGRPcConnectorModule.register({
+      eureka: {
+        eureka: eurekaClient,
+        debug: true,
+      },
+      apps: {
+        'USER-SERVICE': {
+          package: 'user',
+          protoPath: join(__dirname, './proto/user.proto'),
+          serviceName: 'UserService',
         },
       },
     }),
@@ -88,6 +132,28 @@ import { EurekaGRPcConnectorModule } from 'nestjs-eureka-grpc-connector';
   ],
 })
 export class AppModule {}
+```
+
+## Eureka Configuration Options
+
+The module supports two ways to connect to Eureka:
+
+### 1. Direct URL Configuration
+```typescript
+eureka: {
+  url: 'http://eureka-server:8761/eureka/apps',
+  pollInterval?: number, // Default: 30000ms
+  debug?: boolean
+}
+```
+
+### 2. Eureka JS Client Configuration  
+```typescript
+eureka: {
+  eureka: EurekaClientInstance,
+  pollInterval?: number, // Default: 30000ms
+  debug?: boolean
+}
 ```
 
 ### Custom Instance Processing

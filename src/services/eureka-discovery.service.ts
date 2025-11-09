@@ -10,18 +10,21 @@ import { Eureka } from 'eureka-js-client';
 
 /**
  * Service responsible for discovering and managing service instances from Eureka
+ * Supports both direct Eureka server URLs and eureka-js-client instances
  * 
  * @example
  * ```typescript
- * constructor(private discoveryService: EurekaDiscoveryService) {}
+ * // With Eureka URL
+ * await this.discoveryService.discoverServices(
+ *   'http://eureka:8761/eureka/apps',
+ *   { debug: true }
+ * );
  * 
- * async discoverServices() {
- *   const instances = await this.discoveryService.discoverServices(
- *     'http://eureka:8761/eureka/apps',
- *     { debug: true }
- *   );
- *   const userInstances = this.discoveryService.getServiceInstances('USER-SERVICE');
- * }
+ * // With Eureka client instance  
+ * await this.discoveryService.discoverServices(
+ *   eurekaClient,
+ *   { debug: true, appsIds: ['USER-SERVICE'] }
+ * );
  * ```
  */
 @Injectable()
@@ -41,7 +44,7 @@ export class EurekaDiscoveryService {
   /**
    * Discovers services from Eureka server and updates internal cache
    * 
-   * @param eureka - The Eureka server URL or Eureka client to fetch services from
+   * @param eureka - The Eureka server URL or eureka-js-client instance to fetch services from
    * @returns Promise that resolves when discovery is complete
    */
   async discoverServices(eureka: Eureka, options: { debug?: boolean, instanceProcessor?: InstanceProcessor, appsIds: string[] }): Promise<Map<string, ServiceInstance[]>>

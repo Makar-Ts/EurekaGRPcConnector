@@ -11,6 +11,7 @@ import { Eureka } from 'eureka-js-client';
 /**
  * Service for managing gRPC clients with Eureka service discovery
  * Handles client creation, load balancing, and periodic updates
+ * Supports both Eureka server URLs and eureka-js-client instances
  * 
  * @example
  * ```typescript
