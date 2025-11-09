@@ -42,10 +42,15 @@ export class EurekaDiscoveryService {
   }
 
   /**
-   * Discovers services from Eureka server and updates internal cache
+   * Discovers services from Eureka server or client and updates internal cache
    * 
-   * @param eureka - The Eureka server URL or eureka-js-client instance to fetch services from
-   * @returns Promise that resolves when discovery is complete
+   * Supports two operation modes:
+   * 1. URL-based discovery: Fetches service information from Eureka server URL
+   * 2. Client-based discovery: Uses pre-configured Eureka client instance
+   * 
+   * @param eureka - The Eureka server URL or Eureka client to fetch services from
+   * @param options - Discovery options including debug mode and instance processor
+   * @returns Promise that resolves with map of service names to their instances
    */
   async discoverServices(eureka: Eureka, options: { debug?: boolean, instanceProcessor?: InstanceProcessor, appsIds: string[] }): Promise<Map<string, ServiceInstance[]>>
   async discoverServices(eureka: string, options?: { debug?: boolean, instanceProcessor?: InstanceProcessor }): Promise<Map<string, ServiceInstance[]>>

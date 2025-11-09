@@ -18,6 +18,10 @@ export interface GRPcClientSetupOptions {
 /**
  * Main configuration options for the Eureka gRPC connector module
  * 
+ * Supports two configuration modes:
+ * 1. URL-based: Simple configuration using Eureka server URL
+ * 2. Client-based: Advanced configuration using pre-configured Eureka client instance
+ * 
  * @example
  * ```typescript
  * // With Eureka URL
@@ -38,6 +42,7 @@ export interface GRPcClientSetupOptions {
  *   apps: { ... }
  * }
  * ```
+
  */
 export interface EurekaGRPcConnectorModuleOptions {
   /** Eureka server configuration */
@@ -51,7 +56,7 @@ export interface EurekaGRPcConnectorModuleOptions {
 
     debug?: boolean;
   } | {
-    /** Initialized eureka-js-client client */
+    /** Initialized eureka-js-client instance */
     eureka: Eureka,
     /** Polling interval in milliseconds (optional, defaults to 30000) */
     pollInterval?: number;
