@@ -59,6 +59,8 @@ export class GrpcClientService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * @deprecated use getClientAsync instead
+   * 
    * Gets a gRPC client for the specified service
    * 
    * @param serviceName - The name of the service to get client for
@@ -69,6 +71,31 @@ export class GrpcClientService implements OnModuleInit, OnModuleDestroy {
     const client = this.clients.get(serviceName);
     if (!client) {
       throw new Error(`gRPC client for ${serviceName} not found`);
+    }
+    return client;
+  }
+
+  /**
+   * Gets a gRPC client for the specified service
+   * 
+   * @param serviceName - The name of the service to get client for
+   * @returns ClientGrpc instance for the service
+   * @throws Error if client for service is not found
+   */
+  async getClientAsync(serviceName: string): Promise<ClientGrpc> {
+    let client = this.clients.get(serviceName);
+    if (!client) {
+      for (let i=0; i<(this.options.eureka.retryAmount ?? 0); i++) {
+        await this.updateClients();
+
+        client = this.clients.get(serviceName);
+
+        if (client) break;
+      }
+      
+      if (!client) {
+        throw new Error(`gRPC client for ${serviceName} not found`);
+      }
     }
     return client;
   }

@@ -26,6 +26,8 @@ export class GrpcServices {
   ) {}
 
   /**
+   * @deprecated use getServiceAsync instead
+   * 
    * Gets a gRPC service client for the specified service
    * 
    * @template T - The type of the service interface
@@ -37,5 +39,19 @@ export class GrpcServices {
     if (!protobufService) protobufService = serviceName
 
     return this.clientService.getClient(serviceName).getService<T>(protobufService);
+  }
+
+  /**
+   * Gets a gRPC service client for the specified service
+   * 
+   * @template T - The type of the service interface
+   * @param serviceName - The name of the service as registered in Eureka
+   * @param protobufService - The protobuf service name (optional, defaults to serviceName)
+   * @returns The gRPC service client instance
+   */
+  async getServiceAsync<T extends Object>(serviceName: string, protobufService?: string) {
+    if (!protobufService) protobufService = serviceName
+
+    return (await this.clientService.getClientAsync(serviceName)).getService<T>(protobufService);
   }
 }

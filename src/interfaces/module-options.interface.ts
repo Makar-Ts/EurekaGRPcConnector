@@ -55,6 +55,8 @@ export interface EurekaGRPcConnectorModuleOptions {
     metadata?: Metadata;
 
     debug?: boolean;
+    /** Retry getting the service from eureka (0 to not) */
+    retryAmount?: number;
   } | {
     /** Initialized eureka-js-client instance */
     eureka: Eureka,
@@ -62,6 +64,8 @@ export interface EurekaGRPcConnectorModuleOptions {
     pollInterval?: number;
 
     debug?: boolean;
+    /** Retry getting the service from eureka (0 to not) */
+    retryAmount?: number;
   };
   instanceProcessor?: InstanceProcessor;
   /** Mapping of service names to their gRPC configuration */
